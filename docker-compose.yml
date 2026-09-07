@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: songcrate
+      POSTGRES_PASSWORD: songcrate
+      POSTGRES_DB: songcrate
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U songcrate"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://songcrate:songcrate@db:5432/songcrate
+      JWT_SECRET: change-me-in-production
+      STORAGE_DRIVER: local
+      LOCAL_STORAGE_DIR: /data/uploads
+      PUBLIC_API_URL: http://localhost:4000
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "4000:4000"
+    volumes:
+      - media:/data/uploads
+    command: sh -c "node src/migrate.js && node src/server.js"
+
+volumes:
+  pgdata:
+  media:

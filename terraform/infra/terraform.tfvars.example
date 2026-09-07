@@ -1,0 +1,23 @@
+aws_region = "ap-south-1"
+project_name = "cryptune"
+
+availability_zones = [
+  "ap-south-1a",
+  "ap-south-1b"
+]
+
+github_owner = "YOUR_GITHUB_USERNAME_OR_ORG"
+github_repo  = "cryptune"
+github_branch = "main"
+
+# Leave empty to let Terraform create the GitHub connection.
+github_connection_arn = ""
+
+cloudinary_cloud_name = "YOUR_CLOUD_NAME"
+cloudinary_api_key    = "YOUR_API_KEY"
+cloudinary_api_secret = "YOUR_API_SECRET"
+
+jwt_secret = "CHANGE_ME_TO_A_LONG_RANDOM_SECRET"
+
+# Optional. Put an ACM certificate ARN here after certificate validation.
+acm_certificate_arn = ""

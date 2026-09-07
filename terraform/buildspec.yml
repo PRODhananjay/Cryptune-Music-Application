@@ -1,0 +1,33 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - AWS_REGION=${AWS_DEFAULT_REGION}
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+  build:
+    commands:
+      - echo Building frontend...
+      - docker build -t ${ECR_FRONTEND_REPO}:${CODEBUILD_RESOLVED_SOURCE_VERSION} ./frontend
+      - docker tag ${ECR_FRONTEND_REPO}:${CODEBUILD_RESOLVED_SOURCE_VERSION} ${ECR_FRONTEND_REPO}:latest
+
+      - echo Building backend...
+      - docker build -t ${ECR_BACKEND_REPO}:${CODEBUILD_RESOLVED_SOURCE_VERSION} ./backend
+      - docker tag ${ECR_BACKEND_REPO}:${CODEBUILD_RESOLVED_SOURCE_VERSION} ${ECR_BACKEND_REPO}:latest
+
+  post_build:
+    commands:
+      - echo Pushing frontend...
+      - docker push ${ECR_FRONTEND_REPO}:${CODEBUILD_RESOLVED_SOURCE_VERSION}
+      - docker push ${ECR_FRONTEND_REPO}:latest
+      - echo Pushing backend...
+      - docker push ${ECR_BACKEND_REPO}:${CODEBUILD_RESOLVED_SOURCE_VERSION}
+      - docker push ${ECR_BACKEND_REPO}:latest
+      - printf '[{"name":"frontend","imageUri":"%s"},{"name":"backend","imageUri":"%s"}]' "${ECR_FRONTEND_REPO}:${CODEBUILD_RESOLVED_SOURCE_VERSION}" "${ECR_BACKEND_REPO}:${CODEBUILD_RESOLVED_SOURCE_VERSION}" > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
