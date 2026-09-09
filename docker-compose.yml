@@ -1,39 +1,83 @@
 services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: songcrate
-      POSTGRES_PASSWORD: songcrate
-      POSTGRES_DB: songcrate
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U songcrate"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
 
-  api:
-    build: ./backend
-    depends_on:
-      db:
-        condition: service_healthy
+  # =========================
+  # PostgreSQL Database
+  # =========================
+  postgres:
+    image: postgres:18.6
+    container_name: cryptune-postgres
+    restart: unless-stopped
+
     environment:
-      PORT: 4000
-      DATABASE_URL: postgresql://songcrate:songcrate@db:5432/songcrate
-      JWT_SECRET: change-me-in-production
-      STORAGE_DRIVER: local
-      LOCAL_STORAGE_DIR: /data/uploads
-      PUBLIC_API_URL: http://localhost:4000
-      CORS_ORIGINS: http://localhost:5173
+      POSTGRES_DB: cryptune
+      POSTGRES_USER: cryptune
+      POSTGRES_PASSWORD: cryptune_password
+
+    volumes:
+      - cryptune-postgres-data:/var/lib/postgresql
+
+    networks:
+      - cryptune-network
+
+
+  # =========================
+  # Backend
+  # =========================
+  backend:
+    image: cryptune-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: cryptune-backend
+    restart: unless-stopped
+
+    env_file:
+      - ./backend/.env
+
     ports:
       - "4000:4000"
-    volumes:
-      - media:/data/uploads
-    command: sh -c "node src/migrate.js && node src/server.js"
 
+    depends_on:
+      - postgres
+
+    networks:
+      - cryptune-network
+
+
+  # =========================
+  # Frontend
+  # =========================
+  frontend:
+    image: cryptune-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: cryptune-frontend
+    restart: unless-stopped
+
+    ports:
+      - "5173:80"
+
+    depends_on:
+      - backend
+
+    networks:
+      - cryptune-network
+
+
+# =========================
+# Persistent Database Volume
+# =========================
 volumes:
-  pgdata:
-  media:
+  cryptune-postgres-data:
+    name: cryptune-postgres-data
+
+
+# =========================
+# Docker Network
+# =========================
+networks:
+  cryptune-network:
+    name: cryptune-network
